@@ -1,7 +1,7 @@
-// vite.config.js
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  plugins: [react()], // 🔥 This must match your repo name exactly (case-sensitive)
+  base: '/DynamicEventCalendar/',  // 👈 Important! Use your repo name here with slashes
+  plugins: [react()],
 })
