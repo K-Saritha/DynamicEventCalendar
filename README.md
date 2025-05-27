@@ -83,7 +83,7 @@ A modern, interactive event calendar built with React that allows users to manag
 
 ```bash
 git clone https://github.com/k-saritha/DynamicEventCalendar.git
-cd project
+
 npm install
 ````
 
@@ -118,26 +118,6 @@ Now open your browser at [http://localhost:5173](http://localhost:5173)
 * They remain intact even if you refresh or close the browser
 * No sign-in or database required
 
----
 
-## 🗂️ Project Structure
-
-```
-src/
-├── components/
-│   ├── Calendar.jsx
-│   ├── CalendarHeader.jsx
-│   ├── CalendarGrid.jsx
-│   ├── ViewSelector.jsx
-│   ├── EventForm.jsx
-│   ├── EventItem.jsx
-│   └── ui/
-├── context/
-│   └── EventContext.jsx
-├── hooks/
-│   └── useCalendar.js
-└── utils/
-    └── dateUtils.js
-```
 
 
