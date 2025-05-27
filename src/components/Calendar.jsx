@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { CalendarHeader } from './CalendarHeader';
 import { CalendarGrid } from './CalendarGrid';
+import { WeekView } from './WeekView';
+import { DayView } from './DayView';
 import { Modal } from './ui/Modal';
 import { EventForm } from './EventForm';
 import { useCalendar } from '../hooks/useCalendar';
@@ -16,6 +18,7 @@ import {
 } from '@dnd-kit/core';
 import { EventItem } from './EventItem';
 import { formatDateToYYYYMMDD } from '../utils/dateUtils';
+import AgendaView from './AgendaView';
 
 export const Calendar = () => {
   const { 
@@ -38,6 +41,10 @@ export const Calendar = () => {
     moveEvent,
   } = useEvents();
   
+  // View state
+  const [currentView, setCurrentView] = useState('month');
+  const [currentDate, setCurrentDate] = useState(new Date());
+  
   // Form state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -54,6 +61,8 @@ export const Calendar = () => {
     type: 'info',
     onConfirm: () => {},
   });
+  
+  const [isAgendaOpen, setIsAgendaOpen] = useState(false);
   
   // Configure drag sensors
   const sensors = useSensors(
@@ -208,13 +217,81 @@ export const Calendar = () => {
     if (!over) return;
     
     const { eventId, fromDate } = active.data.current;
-    const { dateKey: toDate } = over.data.current;
+    const { dateKey, hour } = over.data.current;
     
-    if (fromDate !== toDate) {
-      moveEvent(eventId, fromDate, toDate);
+    if (fromDate !== dateKey || hour !== undefined) {
+      const draggedEvent = findEventById(eventId);
+      if (!draggedEvent) return;
+
+      // If we're dropping into a specific hour slot (day view)
+      if (hour !== undefined) {
+        const eventDate = new Date(dateKey);
+        eventDate.setHours(hour);
+        eventDate.setMinutes(0);
+        
+        const updatedEvent = {
+          ...draggedEvent,
+          date: dateKey,
+          datetime: eventDate.toISOString(),
+          time: format(eventDate, 'HH:mm')
+        };
+        
+        moveEvent(eventId, fromDate, dateKey, updatedEvent);
+      } else {
+        // Regular date-to-date move (month view)
+        moveEvent(eventId, fromDate, dateKey);
+      }
     }
   };
   
+  const handleViewChange = (view) => {
+    setCurrentView(view);
+  };
+
+  const handleDateChange = (newDate) => {
+    setCurrentDate(newDate);
+    setCurrentMonth(newDate);
+  };
+
+  const renderCalendarView = () => {
+    switch (currentView) {
+      case 'week':
+        return (
+          <WeekView
+            currentDate={currentDate}
+            events={events}
+            onEventClick={handleEventClick}
+            onDateChange={handleDateChange}
+            onDayClick={handleDayClick}
+          />
+        );
+      case 'day':
+        return (
+          <DayView
+            currentDate={currentDate}
+            events={events}
+            onEventClick={handleEventClick}
+            onDateChange={handleDateChange}
+            onDayClick={handleDayClick}
+          />
+        );
+      case 'month':
+      default:
+        return (
+          <CalendarGrid
+            weeks={weeks}
+            onDayClick={handleDayClick}
+            onEventClick={handleEventClick}
+            currentMonth={currentMonth}
+            onMonthSelect={(date) => {
+              setCurrentMonth(date);
+              setCurrentDate(date);
+            }}
+          />
+        );
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <DndContext
@@ -235,17 +312,14 @@ export const Calendar = () => {
           onSearch={handleSearch}
           searchResults={searchResults}
           onEventClick={handleEventClick}
+          onShowAgenda={() => setIsAgendaOpen(true)}
+          currentView={currentView}
+          onViewChange={handleViewChange}
+          currentDate={currentDate}
+          onDateSelect={handleDateChange}
         />
         
-        <CalendarGrid
-          weeks={weeks}
-          onDayClick={handleDayClick}
-          onEventClick={handleEventClick}
-          currentMonth={currentMonth}
-          onMonthSelect={(date) => {
-            setCurrentMonth(date);
-          }}
-        />
+        {renderCalendarView()}
         
         <DragOverlay>
           {draggedEvent && (
@@ -272,6 +346,17 @@ export const Calendar = () => {
           hasConflict={(data) => hasConflicts(data, selectedEvent?.id)}
         />
       </Modal>
+
+      {isAgendaOpen && (
+        <AgendaView
+          events={getAllEvents()}
+          onClose={() => setIsAgendaOpen(false)}
+          onEventClick={(event) => {
+            handleEventClick(event.id, event.date);
+            setIsAgendaOpen(false);
+          }}
+        />
+      )}
 
       <Dialog
         isOpen={dialogConfig.isOpen}

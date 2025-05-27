@@ -2,20 +2,28 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Calendar, Plus, Search, X } from 'lucide-react';
 import { Button } from './ui/Button';
 import { SearchResults } from './SearchResults';
+import { ViewSelector } from './ui/ViewSelector';
+import { format, parse } from 'date-fns';
+import { DatePicker } from './ui/DatePicker';
 
 export const CalendarHeader = ({
   monthYearString,
   onPrevMonth,
   onNextMonth,
-  onToday,
   onAddEvent,
   onSearch,
+  onShowAgenda,
+  currentView,
+  onViewChange,
   searchResults = [],
   onEventClick,
+  currentDate,
+  onDateSelect,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchRef = useRef(null);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -42,29 +50,57 @@ export const CalendarHeader = ({
     setIsSearchFocused(false);
   };
 
+  const handleDatePickerChange = (date) => {
+    onDateSelect(date);
+    setIsDatePickerOpen(false);
+  };
+
   return (
     <div className="mb-4">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-4">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-dark-primary">
-            {monthYearString}
-          </h2>
-          <div className="flex items-center space-x-2">
+          <div className="relative flex items-center space-x-2">
             <Button
-              onClick={onPrevMonth}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-dark-hover rounded-full"
+              onClick={() => setIsDatePickerOpen((open) => !open)}
               variant="ghost"
+              className="p-1 hover:bg-gray-100 dark:hover:bg-dark-hover text-gray-600 dark:text-white rounded-full"
+              aria-label="Pick a date"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <Calendar className="w-5 h-5" />
             </Button>
-            <Button
-              onClick={onNextMonth}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-dark-hover rounded-full"
-              variant="ghost"
+            {isDatePickerOpen && (
+              <div className="absolute z-50 mt-2 left-0">
+                <DatePicker
+                  selected={currentDate}
+                  onChange={handleDatePickerChange}
+                  onBlur={() => setIsDatePickerOpen(false)}
+                />
+              </div>
+            )}
+            <h2
+              className="text-xl font-semibold text-gray-900 dark:text-dark-primary select-none"
             >
-              <ChevronRight className="w-5 h-5" />
-            </Button>
+              {monthYearString}
+            </h2>
           </div>
+          {currentView === 'month' && (
+            <div className="flex items-center space-x-2">
+              <Button
+                onClick={onPrevMonth}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-dark-hover text-gray-600 dark:text-white rounded-full"
+                variant="ghost"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </Button>
+              <Button
+                onClick={onNextMonth}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-dark-hover text-gray-600 dark:text-white rounded-full"
+                variant="ghost"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center space-x-4">
@@ -97,13 +133,19 @@ export const CalendarHeader = ({
             )}
           </div>
 
+          <ViewSelector 
+            currentView={currentView} 
+            onViewChange={onViewChange} 
+            className="ml-2"
+          />
+
           <Button
-            onClick={onToday}
+            onClick={onShowAgenda}
             variant="outline"
-            className="flex items-center space-x-2"
+            className="flex items-center space-x-2 bg-white dark:bg-dark-primary text-gray-700 dark:text-white border border-gray-300 dark:border-dark-border shadow-sm hover:bg-blue-100 dark:hover:bg-blue-800/60 transition-colors"
           >
             <Calendar className="w-4 h-4" />
-            <span>Today</span>
+            <span>Agenda</span>
           </Button>
 
           <Button

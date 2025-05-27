@@ -208,10 +208,18 @@ export const EventProvider = ({ children }) => {
   const hasConflicts = (eventData, excludeId) => {
     const dateKey = eventData.date;
     const eventsOnDay = events[dateKey] || [];
-    
+    const [startHour, startMinute] = eventData.time.split(':').map(Number);
+    const [endHour, endMinute] = eventData.endTime ? eventData.endTime.split(':').map(Number) : [startHour, startMinute];
+    const eventStart = new Date(`${eventData.date}T${eventData.time}`);
+    const eventEnd = new Date(`${eventData.date}T${eventData.endTime || eventData.time}`);
+
     return eventsOnDay.some(existingEvent => {
       if (excludeId && existingEvent.id === excludeId) return false;
-      return existingEvent.time === eventData.time;
+      // If existing event has endTime, check for overlap
+      const existingStart = new Date(`${existingEvent.date}T${existingEvent.time}`);
+      const existingEnd = existingEvent.endTime ? new Date(`${existingEvent.date}T${existingEvent.endTime}`) : existingStart;
+      // Overlap if start < other end and end > other start
+      return eventStart < existingEnd && eventEnd > existingStart;
     });
   };
 
@@ -219,20 +227,31 @@ export const EventProvider = ({ children }) => {
     setDialogConfig(prev => ({ ...prev, isOpen: false }));
   };
 
-  const moveEvent = (id, fromDate, toDate) => {
+  const moveEvent = (id, fromDate, toDate, updatedEventData = null) => {
     const event = findEventById(id);
     if (!event) return;
     
     const newEvents = { ...events };
-    const [hours, minutes] = event.time.split(':');
-    const targetDate = new Date(toDate);
-    targetDate.setHours(parseInt(hours), parseInt(minutes));
+    let movedEvent;
     
-    const movedEvent = {
-      ...event,
-      date: toDate,
-      datetime: targetDate.toISOString(),
-    };
+    if (updatedEventData) {
+      // Use the provided updated event data (for day view time slots)
+      movedEvent = {
+        ...event,
+        ...updatedEventData
+      };
+    } else {
+      // Keep the same time, just change the date (for month view)
+      const [hours, minutes] = event.time.split(':');
+      const targetDate = new Date(toDate);
+      targetDate.setHours(parseInt(hours), parseInt(minutes));
+      
+      movedEvent = {
+        ...event,
+        date: toDate,
+        datetime: targetDate.toISOString(),
+      };
+    }
     
     const hasEventConflict = hasConflicts(movedEvent, id);
     
@@ -245,29 +264,28 @@ export const EventProvider = ({ children }) => {
         confirmText: 'Move Anyway',
         cancelText: 'Cancel',
         onConfirm: () => {
-          moveEventToDate(newEvents, event, fromDate, toDate);
+          moveEventToDate(newEvents, event, fromDate, toDate, movedEvent);
           handleCloseDialog();
         },
         onCancel: handleCloseDialog,
       });
     } else {
-      moveEventToDate(newEvents, event, fromDate, toDate);
+      moveEventToDate(newEvents, event, fromDate, toDate, movedEvent);
     }
   };
 
-  const moveEventToDate = (newEvents, event, fromDate, toDate) => {
+  const moveEventToDate = (newEvents, event, fromDate, toDate, movedEvent) => {
+    // Remove from old date
     newEvents[fromDate] = newEvents[fromDate].filter(e => e.id !== event.id);
     if (newEvents[fromDate].length === 0) {
       delete newEvents[fromDate];
     }
 
+    // Add to new date
     if (!newEvents[toDate]) {
       newEvents[toDate] = [];
     }
-    newEvents[toDate].push({
-      ...event,
-      date: toDate
-    });
+    newEvents[toDate].push(movedEvent);
     
     setEvents(newEvents);
   };

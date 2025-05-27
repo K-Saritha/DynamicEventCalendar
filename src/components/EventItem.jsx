@@ -2,6 +2,7 @@ import React from 'react';
 import { cn } from '../utils/dateUtils';
 import { useDraggable } from '@dnd-kit/core';
 import { Repeat } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 
 const getEventColorClass = (color) => {
   const colorMap = {
@@ -34,6 +35,9 @@ export const EventItem = ({
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
     zIndex: 20,
   } : undefined;
+
+  const eventTime = event.datetime ? format(parseISO(event.datetime), 'HH:mm') : event.time;
+  const eventEndTime = event.endTime ? event.endTime : null;
     
   return (
     <div
@@ -42,20 +46,28 @@ export const EventItem = ({
       {...listeners}
       {...attributes}
       className={cn(
-        "px-2 py-1 text-xs rounded border cursor-pointer transition-all",
-        "hover:ring-2 hover:ring-offset-1 dark:hover:ring-offset-dark-secondary truncate",
+        "w-full px-2 py-1 text-xs rounded border cursor-pointer transition-all",
+        "hover:ring-2 hover:ring-offset-1 dark:hover:ring-offset-dark-secondary",
         getEventColorClass(event.color),
         transform && "opacity-80"
       )}
       onClick={onClick}
     >
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 w-full">
+        <span className="flex-shrink-0 font-medium">
+          {eventTime}
+          {eventEndTime && (
+            <>
+              {' - '}
+              {eventEndTime}
+            </>
+          )}
+        </span>
         {event.isRecurring && (
           <Repeat size={10} className="flex-shrink-0" />
         )}
-        <span className="font-medium truncate">{event.title}</span>
+        <span className="truncate flex-1">{event.title}</span>
       </div>
-      <div className="text-xs opacity-75">{event.time}</div>
     </div>
   );
 };

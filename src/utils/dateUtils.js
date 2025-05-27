@@ -135,9 +135,14 @@ const checkRecurringEventVisibility = (event, targetDate, eventDate) => {
 export const checkEventConflict = (event1, event2) => {
   const date1 = new Date(event1.datetime);
   const date2 = new Date(event2.datetime);
-  return isSameDay(date1, date2) && 
-         date1.getHours() === date2.getHours() && 
-         date1.getMinutes() === date2.getMinutes();
+  if (!isSameDay(date1, date2)) return false;
+  // Use endTime if available, otherwise treat as zero-length event
+  const start1 = date1;
+  const end1 = event1.endTime ? new Date(`${event1.date}T${event1.endTime}`) : date1;
+  const start2 = date2;
+  const end2 = event2.endTime ? new Date(`${event2.date}T${event2.endTime}`) : date2;
+  // Overlap if start < other end and end > other start
+  return start1 < end2 && end1 > start2;
 };
 
 // Get date key for a specific month and day
